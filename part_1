@@ -1,0 +1,160 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <iostream>
+#include <string.h>
+#include <locale.h>
+#include <time.h>
+#include <windows.h>
+
+int** generG(int size) {
+    int** G = NULL;
+    G = (int**)malloc(size * sizeof(int*));
+    for (int i = 0; i < size; i++) {
+        G[i] = (int*)malloc(size * sizeof(int));
+    }
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size;j++) {
+            G[i][j] = 0;
+        }
+    }
+    for (int i = 0; i < size; i++) {
+        for (int j = i + 1; j < size;j++) {
+            int edge = rand() % 2;
+            G[i][j] = edge;
+            G[j][i] = edge; //dl9 neorientirovanogo grafa
+        }
+    } 
+    return G;
+}
+int** printG(int** G, int size) {
+    printf("Матрица смежности для неориентированного графа:\n");
+    for (int i = 0; i < size;i++) {
+        for (int j = 0; j < size; j++) {
+            printf("%d ", G[i][j]);
+        }
+        printf("\n");
+    }
+    return G;
+}
+int** delv(int** G, int size, int v) {
+    int** Gtemp = generG(size - 1);
+
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            if (i < v && j < v) Gtemp[i][j] = G[i][j];
+            if (i > v && j > v) Gtemp[i-1][j-1] = G[i][j];
+            if (i > v && j < v) Gtemp[i-1][j] = G[i][j];
+            if (i<v && j>v) Gtemp[i][j-1] = G[i][j];
+        }
+    }
+    for (int i = 0; i < size; i++) {
+        free(G[i]);
+    }
+    free(G);
+
+    return Gtemp;
+}
+int** unionv(int** G, int size, int v1, int v2) {
+    int tmp_max = (v1 > v2) ? v1 : v2;
+    int tmp_min = (v1 < v2) ? v1 : v2;
+    v1 = tmp_min;
+    v2 = tmp_max;
+
+    int** Gtemp = generG(size);
+
+    for (int i = 0; i < size; i++)
+        for (int j = 0; j < size; j++)
+            Gtemp[i][j] = G[i][j];
+
+    for (int i = 0; i < size; i++) {
+        if(Gtemp[v2][i] = 1) {
+        Gtemp[v1][i] = Gtemp[v2][i];
+        Gtemp[i][v1] = Gtemp[i][v2];
+        }
+    }
+    Gtemp = delv(Gtemp, size, v2);
+
+    return Gtemp;
+}
+int** contrE(int** G, int size, int v1, int v2) {
+    if (G[v1][v2]) {
+        printf("Нет ребра - операция невозможна");
+    }
+    else {
+        int tmp_max = (v1 > v2) ? v1 : v2;
+        int tmp_min = (v1 < v2) ? v1 : v2;
+        v1 = tmp_min;
+        v2 = tmp_max;
+        G[v1][v2] = 0;
+        G[v2][v1] = 0;
+
+        for (int i = 0; i < size; i++) {
+            if (G[v2][i] == 1) {
+                G[v1][i] = G[v2][i];
+                G[i][v1] = G[i][v2];
+            }
+        }
+
+        G = delv(G, size, v2);
+        return G;
+    }
+}
+int** splitV(int** G, int size, int v) {
+    int** Gtemp = generG(size + 1);
+
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            Gtemp[i][j] = G[i][j];
+        }
+    }
+
+    for (int i = 0; i < size; i++) {
+        Gtemp[i][size] = G[i][v];
+        Gtemp[size][i] = G[i][v];
+    }
+    Gtemp[v][size] = Gtemp[size][v] = 1;
+    Gtemp[size][size] = 0;
+    return Gtemp;
+}
+
+int main() {
+
+    setlocale(LC_ALL, "Russian");
+    int sizeG1 = 3;
+    int sizeG2 = 5;
+    printf("Введите количество вершин графа 1: ");
+    scanf("%d", &sizeG1);
+    printf("Введите количество вершин графа 2: ");
+    scanf("%d", &sizeG2);
+    int** G1 = generG(sizeG1);
+    int** G2 = generG(sizeG2);
+
+    printf("\nграф 1: ");
+    printG(G1, sizeG1);
+    
+    printf("\nУнарные операции:\n");
+    printf("\nОперация отождествления.\nВведите номера вершин (0-%d): ", sizeG1 - 1);
+    int v1 = 0, v2 = 1;
+    scanf("%d%d", &v1, &v2);
+
+    int** G6;
+    G6 = unionv(G1, sizeG1, v1, v2);
+    int nG6 = sizeG1 - 1;
+    printG(G6, nG6);
+
+    printf("\nОперация стягивания ребра. \nВведите номера вершин начального графа (0-%d): ", sizeG1 - 1);
+    scanf("%d%d", &v1, &v2);
+    G1 = contrE(G1, sizeG1, v1, v2);
+    sizeG1++;
+    printG(G1, sizeG1);
+
+    printf("\nОперация расщепления вершины.\nВведите номера вершин предыдущего графа (0-%d): ", sizeG1 - 1);
+    scanf("%d", &v1);
+    G1 = splitV(G1, sizeG1, v1);
+    nG6 = ++sizeG1;
+    printG(G1, nG6);
+
+    return 0;
+}
